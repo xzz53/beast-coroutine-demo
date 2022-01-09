@@ -9,9 +9,6 @@
 
 #include <cstdlib>
 #include <exception>
-#include <functional>
-#include <iostream>
-#include <ostream>
 #include <string>
 #include <vector>
 
@@ -30,14 +27,19 @@
 #include <boost/beast/version.hpp>
 #include <boost/beast/websocket.hpp>
 
+#include "CxxUrl/url.hpp"
+
+#include "spdlog/fmt/ostr.h"
+#include "spdlog/spdlog.h"
+
 #include "my_result.hh"
-#include "url.hpp"
 
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
 namespace this_coro = boost::asio::this_coro;
 namespace websocket = beast::websocket;
+namespace logging = spdlog;
 
 using boost::system::error_code;
 using net::experimental::channel;
@@ -108,7 +110,7 @@ http_get(const std::string url_string) {
 
         co_return Ok {beast::buffers_to_string(res.body().data())};
     } catch(const std::exception &e) {
-        std::cout << "http_get got exception: " << e.what() << std::endl;
+        logging::error("http_get got exception: {}", e.what());
         co_return Err {std::string {e.what()}};
     }
 }
@@ -127,7 +129,7 @@ http_get_multiple(const std::vector<std::string> urls) {
     result_channel chan {ioc};
 
     for(const auto &url : urls) {
-        std::cout << "HTTP requesting " << url << std::endl;
+        logging::info("HTTP requesting '{}'", url);
         net::co_spawn(ioc, http_get_wrapper(url, chan), net::detached);
     }
 
@@ -137,9 +139,9 @@ http_get_multiple(const std::vector<std::string> urls) {
     for(size_t i = 0; i < N; ++i) {
         const auto r = co_await chan.async_receive(net::use_awaitable);
         if(r.is_ok()) {
-            std::cout << "HTTP got reply " << *r.ok() << std::endl;
+            logging::info("HTTP got reply '{}'", *r.ok());
         } else {
-            std::cout << "HTTP got error " << *r.err() << std::endl;
+            logging::error("HTTP got error '{}'", *r.err());
         }
 
         results.push_back(r);
@@ -196,16 +198,13 @@ websocket_client(websocket::stream<beast::tcp_stream> ws) {
             co_await ws.async_write(net::buffer(result_string), net::use_awaitable);
         }
     } catch(const boost::system::system_error &e) {
-        if(e.code() != websocket::error::closed) {
-            std::cout << "websocket_client got exception2: " << ec << std::endl;
+        if(const auto ec = e.code(); ec != websocket::error::closed) {
+            logging::error("websocket_client got exception: {}", ec);
         } else {
-            std::cout << "websocket client disconnected" << std::endl;
+            logging::info("websocket client disconnected");
         }
     } catch(const std::exception &e) {
-        std::cout << "websocket_client got exception3: " << e.what() << std::endl;
-        // This indicates that the session was closed
-        // if(ec == websocket::error::closed)
-        //     break;
+        logging::error("websocket_client got exception {}", e.what());
     }
 }
 
@@ -219,36 +218,36 @@ websocket_listen(tcp::endpoint endpoint) {
     tcp::acceptor acceptor(ioc);
     acceptor.open(endpoint.protocol(), ec);
     if(ec) {
-        std::cout << ec << std::endl;
+        logging::error("open: {}", ec.what());
         co_return;
     }
 
     // Allow address reuse
     acceptor.set_option(net::socket_base::reuse_address(true), ec);
     if(ec) {
-        std::cout << ec << std::endl;
+        logging::error("set_options: {}", ec.what());
         co_return;
     }
 
     // Bind to the server address
     acceptor.bind(endpoint, ec);
     if(ec) {
-        std::cout << ec << std::endl;
+        logging::error("bind: {}", ec.what());
         co_return;
     }
 
     // Start listening for connections
     acceptor.listen(net::socket_base::max_listen_connections, ec);
     if(ec) {
-        std::cout << ec << std::endl;
+        logging::error("listen {}", ec.what());
         co_return;
     }
 
-    std::cout << "listening on ws://" << endpoint << std::endl;
+    logging::info("listening on ws://{}", endpoint);
     for(;;) {
         tcp::socket socket(ioc);
         co_await acceptor.async_accept(socket, net::use_awaitable);
-        std::cout << "websocket client connected" << std::endl;
+        logging::info("websocket client connected from {}", socket.remote_endpoint());
         net::co_spawn(
             ioc, websocket_client(websocket::stream<beast::tcp_stream>(std::move(socket))),
             net::detached);
@@ -263,9 +262,9 @@ test3() {
 
     for(const auto &r : result) {
         if(r.is_ok()) {
-            std::cout << *r.ok() << std::endl;
+            logging::info("HTTP got reply '{}'", *r.ok());
         } else {
-            std::cout << *r.err() << std::endl;
+            logging::error("HTTP got error '{}'", *r.err());
         }
     }
 }

@@ -10,12 +10,15 @@ add_executable(asio-coroutine-demo
   src/asio-coroutine-demo.cc
   thirdparty/CxxUrl/url.cpp)
 
+target_compile_definitions(asio-coroutine-demo PRIVATE
+  FMT_HEADER_ONLY)
+
 target_include_directories(asio-coroutine-demo PRIVATE
-  thirdparty/CxxUrl/)
+  thirdparty/)
 
 target_link_libraries(asio-coroutine-demo PRIVATE
   Boost::headers
-  Boost::coroutine
   Threads::Threads)
 
-target_compile_options(asio-coroutine-demo PRIVATE -fcoroutines)
+target_compile_options(asio-coroutine-demo PRIVATE
+  -fcoroutines)
