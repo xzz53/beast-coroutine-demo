@@ -43,12 +43,15 @@ using boost::system::error_code;
 using net::experimental::channel;
 using net::ip::tcp;
 
-using result_channel = channel<void(boost::system::error_code, Result<std::string>)>;
+template <typename T>
+using StringResult = Result<T, std::string>;
+
+using result_channel = channel<void(boost::system::error_code, StringResult<std::string>)>;
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 
-net::awaitable<Result<std::string>>
+net::awaitable<StringResult<std::string>>
 http_get(const std::string url_string) {
     const int version = 11;
     beast::error_code ec;
@@ -106,7 +109,7 @@ http_get(const std::string url_string) {
         co_return Ok {beast::buffers_to_string(res.body().data())};
     } catch(const std::exception &e) {
         std::cout << "http_get got exception: " << e.what() << std::endl;
-        co_return Err {e.what()};
+        co_return Err {std::string {e.what()}};
     }
 }
 
@@ -116,7 +119,7 @@ http_get_wrapper(const std::string url_string, result_channel &chan) {
     co_await chan.async_send(error_code {}, result, net::use_awaitable);
 }
 
-net::awaitable<std::vector<Result<std::string>>>
+net::awaitable<std::vector<StringResult<std::string>>>
 http_get_multiple(const std::vector<std::string> urls) {
     const auto N = urls.size();
     auto ioc = co_await this_coro::executor;
@@ -128,15 +131,15 @@ http_get_multiple(const std::vector<std::string> urls) {
         net::co_spawn(ioc, http_get_wrapper(url, chan), net::detached);
     }
 
-    std::vector<Result<std::string>> results;
+    std::vector<StringResult<std::string>> results;
 
     // TODO: order
     for(size_t i = 0; i < N; ++i) {
         const auto r = co_await chan.async_receive(net::use_awaitable);
-        if(is_ok(r)) {
-            std::cout << "HTTP got reply " << *ok(r) << std::endl;
+        if(r.is_ok()) {
+            std::cout << "HTTP got reply " << *r.ok() << std::endl;
         } else {
-            std::cout << "HTTP got error " << *err(r) << std::endl;
+            std::cout << "HTTP got error " << *r.err() << std::endl;
         }
 
         results.push_back(r);
@@ -181,10 +184,10 @@ websocket_client(websocket::stream<beast::tcp_stream> ws) {
             std::string result_string;
 
             for(const auto &r : result) {
-                if(is_ok(r)) {
-                    result_string += "Ok(" + *ok(r) + ")\n";
+                if(r.is_ok()) {
+                    result_string += "Ok(" + *r.ok() + ")\n";
                 } else {
-                    result_string += "Err(" + *err(r) + ")\n";
+                    result_string += "Err(" + *r.err() + ")\n";
                 }
             }
 
@@ -259,10 +262,10 @@ test3() {
     const auto result = co_await http_get_multiple(urls);
 
     for(const auto &r : result) {
-        if(is_ok(r)) {
-            std::cout << *ok(r) << std::endl;
+        if(r.is_ok()) {
+            std::cout << *r.ok() << std::endl;
         } else {
-            std::cout << *err(r) << std::endl;
+            std::cout << *r.err() << std::endl;
         }
     }
 }

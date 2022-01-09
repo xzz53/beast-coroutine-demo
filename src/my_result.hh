@@ -7,40 +7,49 @@
 
 template <typename T>
 struct Ok {
-    T value;
+    Ok(T value_): value(value_) {}
+
+    T value {};
 };
 
+template <typename T>
 struct Err {
-    std::string message;
+    Err(T value_): value(value_) {}
+
+    T value {};
 };
 
-template <typename T>
-using Result = std::variant<Ok<T>, Err>;
+template <typename T, typename E>
+struct Result {
+    Result(Ok<T> ok): m_var {ok} {}
+    Result(Err<E> err): m_var {err} {}
 
-template <typename T>
-bool
-is_ok(Result<T> r) {
-    return r.index() == 0;
-}
+    // required for boost::asio::experimental::channel;
+    Result() {};
 
-template <typename T>
-bool
-is_err(Result<T> r) {
-    return r.index() == 1;
-}
+    bool is_ok() const {
+        return m_var.index() == 1;
+    }
 
-template <typename T>
-std::optional<T>
-ok(Result<T> r) {
-    const auto *p = std::get_if<0>(&r);
-    return p ? p->value : std::optional<T> {};
-}
+    bool is_err() const {
+        return m_var.index() == 2;
+    }
 
-template <typename T>
-std::optional<std::string>
-err(Result<T> r) {
-    const auto *p = std::get_if<1>(&r);
-    return p ? p->message : std::optional<std::string> {};
-}
+    bool is_undefined() const {
+        return m_var.index() = 0;
+    }
 
+    std::optional<T> ok() const {
+        const auto *p = std::get_if<1>(&m_var);
+        return p ? p->value : std::optional<T> {};
+    }
+
+    std::optional<E> err() const {
+        const auto *p = std::get_if<2>(&m_var);
+        return p ? p->value : std::optional<E> {};
+    }
+
+private:
+    std::variant<std::monostate, Ok<T>, Err<E>> m_var;
+};
 #endif
