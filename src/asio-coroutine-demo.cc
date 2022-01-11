@@ -1,6 +1,3 @@
-#include <boost/algorithm/string/split.hpp>
-#include <boost/beast/core/error.hpp>
-#include <boost/system/detail/error_code.hpp>
 #if defined(__clang__)
 #include <experimental/coroutine>
 #elif defined(__GNUC__)
@@ -17,7 +14,6 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
-#include <boost/asio/experimental/as_tuple.hpp>
 #include <boost/asio/experimental/channel.hpp>
 #include <boost/asio/this_coro.hpp>
 #include <boost/asio/use_awaitable.hpp>
@@ -49,9 +45,6 @@ template <typename T>
 using StringResult = Result<T, std::string>;
 
 using result_channel = channel<void(boost::system::error_code, StringResult<std::string>)>;
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
 
 net::awaitable<StringResult<std::string>>
 http_get(const std::string url_string) {
