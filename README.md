@@ -1,10 +1,10 @@
 # Boost Beast HTTP/Websocket C++ 20 coroutine demo app
 
-## Prerequisites (older versions may be compatible, but have not been tested against)
+## Build dependencies (older versions may be compatible, but have not been tested against)
 * gcc 11.1, cmake
 * boost 1.78
 * python >=3.6, [aiohttp](https://pypi.org/project/aiohttp/) 3.8.1 (for `sleepy-server.py`)
-* [websocat](https://github.com/vi/websocat) (for tests)
+* [websocat](https://github.com/vi/websocat) (for testing)
 
 ## Building
 
@@ -30,7 +30,7 @@ In shell 1:
 
 In shell 2:
 ```shell
-./build/asio-coroutine-demo
+./build/websocket-proxy
 ```
 
 Then, in shell 3, try sending requests like
