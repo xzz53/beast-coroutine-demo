@@ -30,6 +30,8 @@
 
 #include "my_result.hh"
 
+using namespace std::string_literals;
+
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
@@ -57,13 +59,25 @@ http_get(const std::string url_string) {
 
     try {
         Url url {url_string};
-        const auto host = url.host();
-        const auto port = url.port();
-        const auto target = url.path();
-        const auto scheme = url.scheme();
+        auto host = url.host();
+        auto port = url.port();
+        auto target = url.path();
+        auto scheme = url.scheme();
 
         if(scheme != "http") {
-            co_return Err {"scheme not supported: '" + scheme + "'"};
+            co_return Err {"scheme not supported: '"s + scheme + "'"s};
+        }
+
+        if(host.empty()) {
+            co_return Err {"empty host not allowed"s};
+        }
+
+        if(port.empty()) {
+            port = "80";
+        }
+
+        if(target.empty()) {
+            target = "/";
         }
 
         // Look up the domain name
@@ -100,6 +114,18 @@ http_get(const std::string url_string) {
 
         // Gracefully close the socket
         stream.socket().shutdown(tcp::socket::shutdown_both, ec);
+
+        if(res.result() != http::status::ok) {
+            const auto message = fmt::format("got http status {}", res.result_int());
+            logging::warn(message);
+            co_return Err {message};
+        }
+
+        if(res.body().size() == 0) {
+            const auto message = fmt::format("got http empty body");
+            logging::warn(message);
+            co_return Err {message};
+        }
 
         co_return Ok {beast::buffers_to_string(res.body().data())};
     } catch(const std::exception &e) {
