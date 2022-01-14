@@ -18,14 +18,19 @@ separated lists of URLs from multiple clients via websocket, fetch
 them concurrently via HTTP and return results to the clients as soon
 as all HTTP requests are completed. At this time the fetcher is rather
 simplistic: it ignores redirects and does not support https. Included
-test http server (`sleepy-server.py`) serves URLs like
+test http server (`sleepy-server`) serves URLs like
 `http://localhost:8081/delay`, where `delay` is a real number, by
-sleeping for `delay` seconds and returning a single-line response. In
-order to start the demo, run the following commands.
+sleeping for `delay` seconds and returning a single-line response. It
+offloads CPU-intensive request handling to a separate thread pool,
+thus preventing IO thread from blocking. Note that thread pool has
+fixed size of 2 threads now, so the server can _process_ at most 2
+requests simultaneously. OTOH it has no limits on _accepting_ requests
+at any time.
 
+In order to start the demo, run the following commands:
 In shell 1:
 ```shell
-./sleepy-server.py
+./build/sleepy-server
 ```
 
 In shell 2:
