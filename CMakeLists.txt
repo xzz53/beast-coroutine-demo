@@ -1,13 +1,18 @@
 cmake_minimum_required(VERSION 3.11)
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/thirdparty/sanitizers-cmake/cmake" ${CMAKE_MODULE_PATH})
+
 project(beast-coroutine-demo VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Boost REQUIRED COMPONENTS coroutine)
 find_package(Threads)
+find_package(Sanitizers)
 
 function(add_asio_executable tgt)
   add_executable(${tgt} "${ARGN}")
+  add_sanitizers(${tgt})
+
   target_compile_definitions(${tgt} PRIVATE
     FMT_HEADER_ONLY)
 

@@ -12,6 +12,10 @@
 mkdir build && cmake -B build && cmake --build build
 ```
 
+Sanitizers may be enabled using `-DSANITIZE_ADDRESS=On`,
+`-DSANITIZE_THREAD=On`, `-DSANITIZE_MEMORY=On`,
+`-DSANITIZE_UNDEFINED=On` cmake flags.
+
 ## Running
 The basic operation mode of the demo server is to receive space
 separated lists of URLs from multiple clients via websocket, fetch
